@@ -1,4 +1,4 @@
-package com.zzjz.zzts;
+package com.zzjz.zzts.App;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

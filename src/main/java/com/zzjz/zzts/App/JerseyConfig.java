@@ -1,4 +1,4 @@
-package com.zzjz.zzts;
+package com.zzjz.zzts.App;
 
 import com.zzjz.zzts.controller.ElasticController;
 import com.zzjz.zzts.controller.UserController;
