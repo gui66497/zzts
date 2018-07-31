@@ -66,7 +66,7 @@ public class Xml2Es {
             }
             BulkResponse bulkResponse = client.bulk(request);
             LOGGER.info("执行结果:" +  (bulkResponse.hasFailures() ? "有错误" : "成功"));
-            LOGGER.info("执行用时:" + bulkResponse.getTookInMillis() + "毫秒");
+            LOGGER.info("执行用时:" + bulkResponse.getTook().getMillis() + "毫秒");
         } catch (Exception e) {
             e.printStackTrace();
         }

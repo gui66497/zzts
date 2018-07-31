@@ -52,7 +52,7 @@ public class ElasticController {
             if (count < 1) {
                 return "没有找到 " + location + " 这个地区!";
             }
-            Map<String, Object> map = searchResponse.getHits().getAt(0).getSource();
+            Map<String, Object> map = searchResponse.getHits().getAt(0).getSourceAsMap();
             List<String> getways = (List<String>) map.get("gateway");
             //一旦能连通其中任一网关则代表连接成功
             for (String getway : getways) {
@@ -80,7 +80,7 @@ public class ElasticController {
         InetAddress address;
         try {
             address = InetAddress.getByName(ip);
-            isIpReachable = address.isReachable(2000);
+            isIpReachable = address.isReachable(1000);
             System.out.println("isIpReachable: " + isIpReachable);
         } catch (IOException e) {
             e.printStackTrace();
