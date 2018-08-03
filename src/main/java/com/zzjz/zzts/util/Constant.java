@@ -41,4 +41,20 @@ public class Constant {
      * Elasticsearch的rest端口
      */
     public static final String ES_METHOD = "http";
+
+    /**
+     * 实时监测从过去去多少小时开始
+     */
+    public static final int MONITOR_HOUR = 24;
+
+    public static final String IP_SECTION = "ip_section";
+
+    public static final String RQJC_INDEX = "rqjc_jdbc_12j-*";
+
+    public static final String FIREWALL_INDEX = "firewall-jns*";
+
+    public static final String NWZDJG_INDEX = "nwzdjg-*";
+
+    public static final String VIRUS_INDEX = "virus_12j-*";
+
 }

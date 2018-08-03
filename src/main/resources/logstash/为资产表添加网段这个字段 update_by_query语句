@@ -15,3 +15,11 @@ POST soc-system/_update_by_query
     }
   }
 }
+
+#ip_section插入
+PUT /ip_section/doc/ceshi1
+{
+  "area": "测试地区",
+  "section": ["192.168.1.1/24","192.168.2.1/24"],
+  "gateway": ["192.168.1.1","192.168.2.1"]
+}

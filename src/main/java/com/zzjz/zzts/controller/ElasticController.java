@@ -53,7 +53,7 @@ public class ElasticController {
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
-        SearchRequest searchRequest = new SearchRequest("ip_section");
+        SearchRequest searchRequest = new SearchRequest(Constant.IP_SECTION);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(QueryBuilders.matchPhraseQuery("area", location));
         searchRequest.source(searchSourceBuilder);
@@ -159,11 +159,11 @@ public class ElasticController {
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
         //实时监控默认按最近24小时来
         String format = "yyyy-MM-dd HH:mm:ss";
-        String oldTime = DateTime.now().minusHours(24).toString(format);
+        String oldTime = DateTime.now().minusHours(Constant.MONITOR_HOUR).toString(format);
         LOGGER.info("查询的起始时间为" + oldTime);
         //1.防火墙流量数据(字节)
         int firewallData = 0;
-        SearchRequest searchRequest = new SearchRequest("firewall-jns*");
+        SearchRequest searchRequest = new SearchRequest(Constant.FIREWALL_INDEX);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(QueryBuilders.boolQuery()
                             .must(QueryBuilders.existsQuery("receivePacket"))
@@ -185,7 +185,7 @@ public class ElasticController {
         System.out.println("防火墙流量:" + bytes2kb(firewallData));
         resMap.put("防火墙流量", bytes2kb(firewallData));
         //2.终端告警数量
-        SearchRequest searchRequest2 = new SearchRequest("nwzdjg-*");
+        SearchRequest searchRequest2 = new SearchRequest(Constant.NWZDJG_INDEX);
         SearchSourceBuilder searchSourceBuilder2 = new SearchSourceBuilder();
         searchSourceBuilder2.query(QueryBuilders.boolQuery()
                 .should(QueryBuilders.matchPhraseQuery("logType", "WAR"))
@@ -203,7 +203,7 @@ public class ElasticController {
             e.printStackTrace();
         }
         //3.入侵告警数量
-        SearchRequest searchRequest3 = new SearchRequest("rqjc_jdbc_12j-*");
+        SearchRequest searchRequest3 = new SearchRequest(Constant.RQJC_INDEX);
         SearchSourceBuilder searchSourceBuilder3 = new SearchSourceBuilder();
         searchSourceBuilder3.query(QueryBuilders.boolQuery()
                 .must(QueryBuilders.rangeQuery("eventtime")
@@ -219,7 +219,7 @@ public class ElasticController {
             e.printStackTrace();
         }
         //4.病毒数量
-        SearchRequest searchRequest4 = new SearchRequest("virus_12j-*");
+        SearchRequest searchRequest4 = new SearchRequest(Constant.VIRUS_INDEX);
         SearchSourceBuilder searchSourceBuilder4 = new SearchSourceBuilder();
         searchSourceBuilder4.query(QueryBuilders.boolQuery()
                 .must(QueryBuilders.rangeQuery("ctime")
