@@ -1,0 +1,17 @@
+POST soc-system/_update_by_query
+{
+  "script": {
+    "source": "def a=ctx._source['ip'].lastIndexOf('.');def sec=ctx._source['ip'].substring(0,a);ctx._source['ipSection']=sec+'.0'"
+  },
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "exists": {
+            "field": "ip"
+          }
+        }
+      ]
+    }
+  }
+}
