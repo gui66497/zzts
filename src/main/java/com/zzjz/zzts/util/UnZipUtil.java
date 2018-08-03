@@ -1,5 +1,7 @@
 package com.zzjz.zzts.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,6 +17,8 @@ import java.util.zip.ZipFile;
  * @date 2018/7/31 14:41
  */
 public class UnZipUtil {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(UnZipUtil.class);
 
     /**
      * 解压到指定目录
@@ -33,7 +37,8 @@ public class UnZipUtil {
      */
     @SuppressWarnings("rawtypes")
     public static void unZipFiles(File zipFile, String descDir) throws IOException {
-
+        LOGGER.info("******************开始调用解压方法********************");
+        long start = System.currentTimeMillis();
         //解决中文文件夹乱码
         ZipFile zip = new ZipFile(zipFile, Charset.forName("GBK"));
         String name = zip.getName().substring(zip.getName().lastIndexOf('\\')+1, zip.getName().lastIndexOf('.'));
@@ -70,7 +75,8 @@ public class UnZipUtil {
             in.close();
             out.close();
         }
-        System.out.println("******************解压完毕********************");
+        long end = System.currentTimeMillis();
+        LOGGER.info("******************解压完毕,用时" + (end - start) + "********************");
     }
 
 }

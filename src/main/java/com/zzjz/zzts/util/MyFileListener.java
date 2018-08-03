@@ -50,7 +50,7 @@ public class MyFileListener implements FileAlterationListener {
                 e.printStackTrace();
             }
         } else if (Constant.XML.equals(prefix)) {
-            LOGGER.info("调用xml2es方法");
+            //调用xml2es方法
             Xml2Es.analysis(file);
         }
     }
