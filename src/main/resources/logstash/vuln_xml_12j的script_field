@@ -1,3 +1,3 @@
 vuln_xml_12j-*
-漏洞等级	painless	double points=doc['risk_points'].value;if (points>=0&&points<4) {'低'} else if (points>=4&&points<7) {'中'} else if (points>=7) {'高'}
+漏洞等级	painless	double points=doc['risk_points'].value;if (points>=0&&points<4) {"低"} else if (points>=4&&points<7) {"中"} else if (points>=7) {"高"}
 威胁分类	painless	doc['threat_category.keyword'].value
