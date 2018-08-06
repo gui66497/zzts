@@ -1,6 +1,7 @@
 package com.zzjz.zzts.controller;
 
 import com.zzjz.zzts.util.Constant;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -24,10 +25,16 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author 房桂堂
@@ -119,7 +126,7 @@ public class ElasticController {
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
         Map<String, Integer> resMap = new LinkedHashMap<>();
-        SearchRequest searchRequest = new SearchRequest("nwzdjg-*");
+        SearchRequest searchRequest = new SearchRequest(Constant.NWZDJG_INDEX);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(QueryBuilders.matchPhraseQuery("logType", "STA"));
         searchSourceBuilder.sort(new FieldSortBuilder("@timestamp").order(SortOrder.DESC));
@@ -242,6 +249,74 @@ public class ElasticController {
             }
         }
         return resMap;
+    }
+
+    /**
+     * 病毒感染机器数排行
+     * @return 排行
+     */
+    @GET
+    @Path("virusRank")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, Integer>  virusRank() {
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
+        Map<String, Set<String>> resMap = new HashMap<>();
+        //病毒排行默认按最近1个月来
+        String format = "yyyy-MM-dd HH:mm:ss";
+        String oldTime = DateTime.now().minusMonths(1).toString(format);
+        LOGGER.info("查询的起始时间为" + oldTime);
+        //1.防火墙流量数据(字节)
+        SearchRequest searchRequest = new SearchRequest(Constant.VIRUS_INDEX);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        //默认查前1万条
+        searchSourceBuilder.size(10000);
+        searchSourceBuilder.query(QueryBuilders.boolQuery()
+                .must(QueryBuilders.rangeQuery("@timestamp")
+                        .format(format).gte(oldTime).timeZone("Asia/Shanghai")));
+        searchRequest.source(searchSourceBuilder);
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            Iterator it = searchResponse.getHits().iterator();
+            while (it.hasNext()) {
+                SearchHit hit = (SearchHit) it.next();
+                String name = (String) hit.getSourceAsMap().get("name");
+                String ipStr = (String) hit.getSourceAsMap().get("ip");
+                if (StringUtils.isNotBlank(ipStr) && ipStr.contains(";")) {
+                    String[] ipArr = ipStr.split(";");
+                    if (resMap.get(name) == null) {
+                        resMap.put(name, new HashSet<>(Arrays.asList(ipArr)));
+                    } else {
+                        Set<String> originSet = resMap.get(name);
+                        originSet.addAll(Arrays.asList(ipArr));
+                        resMap.put(name, originSet);
+                    }
+                }
+            }
+            client.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //将map结果统计个数并排序
+        // 降序比较器
+        Comparator<Map.Entry<String, Integer>> valueComparator = (o1, o2) -> o2.getValue() - o1.getValue();
+        Map<String, Integer> map = new HashMap<>();
+        for (Map.Entry<String, Set<String>> entry : resMap.entrySet()) {
+            map.put(entry.getKey(), entry.getValue().size());
+        }
+        // map转换成list进行排序
+        List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
+        list.sort(valueComparator);
+        Map<String, Integer> sortedMap = new LinkedHashMap<>();
+        Iterator<Map.Entry<String, Integer>> iter = list.iterator();
+        Map.Entry<String, Integer> tmpEntry = null;
+        while (iter.hasNext()) {
+            tmpEntry = iter.next();
+            sortedMap.put(tmpEntry.getKey(), tmpEntry.getValue());
+        }
+        return sortedMap;
     }
 
     /**
