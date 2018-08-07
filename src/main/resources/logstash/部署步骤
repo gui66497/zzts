@@ -1,0 +1,6 @@
+将天阗入侵检测和江民防病毒的logstash配置导入到es
+启动本地logstash修改time和表名采集7号一天的数据,并删除sql_last_run,0807的0~24点对应的unixtime为1533571200~1533657600
+修改zzts项目的配置:es的ip和漏洞报表的监控目录,然后启动项目
+将绿盟漏洞的zip放到监控目录下,导入数据到es
+添加script_field,分别为vuln_xml_12j-*和virus_12j-*的
+导入可视化和仪表盘
