@@ -320,7 +320,7 @@ public class ElasticController {
     }
 
     /**
-     * byte(字节)根据长度转成kb(千字节)和mb(兆字节)
+     * byte(字节)根据长度转成kb(千字节)和mb(兆字节)或gb
      *
      * @param bytes 字节
      * @return string
@@ -346,7 +346,7 @@ public class ElasticController {
     }
 
     public static void main(String[] args) {
-        System.out.println(bytes2kb(21200));
+        System.out.println(bytes2kb(212000));
     }
 
 }
