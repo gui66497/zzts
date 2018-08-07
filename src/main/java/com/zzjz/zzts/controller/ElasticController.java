@@ -1,5 +1,6 @@
 package com.zzjz.zzts.controller;
 
+import com.zzjz.zzts.Entity.Link;
 import com.zzjz.zzts.util.Constant;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
@@ -35,6 +36,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * @author 房桂堂
@@ -94,6 +99,116 @@ public class ElasticController {
         return isReachAble ? "success" : "fail";
     }
 
+    /**
+     * 获取所有节点的连接情况
+     * @return 连接情况
+     */
+    @GET
+    @Path("isReachAbleAll")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<Link> isReachAbleAll() {
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
+        SearchRequest searchRequest = new SearchRequest(Constant.IP_SECTION);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(100);
+        searchRequest.source(searchSourceBuilder);
+        List<Link> links = new ArrayList<>();
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            Iterator it = searchResponse.getHits().iterator();
+            while (it.hasNext()) {
+                boolean isReachAble = false;
+                SearchHit hit = (SearchHit) it.next();
+                Link link = new Link();
+                Map<String, Object> map = hit.getSourceAsMap();
+                String area = (String) map.get("area");
+                if ("上海".equals(area)) {
+                    //过滤掉上海地区
+                    continue;
+                }
+                List<String> getways = (List<String>) map.get("gateway");
+                //一旦能连通其中任一网关则代表连接成功
+                for (String getway : getways) {
+                    if (isIpReachable(getway)) {
+                        isReachAble = true;
+                        break;
+                    }
+                }
+                link.setArea(area);
+                link.setIsLink(isReachAble ? 1 : 0);
+                links.add(link);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return links;
+    }
+
+    /**
+     * 获取所有节点的连接情况(优化版)
+     * @return
+     */
+    /*@GET
+    @Path("isReachAbleAll2")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<Link> isReachAbleAll2() {
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
+        SearchRequest searchRequest = new SearchRequest(Constant.IP_SECTION);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(100);
+        searchRequest.source(searchSourceBuilder);
+        List<Link> links = new ArrayList<>();
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            Iterator it = searchResponse.getHits().iterator();
+            ExecutorService es = Executors.newFixedThreadPool(10);
+            List<Future<String>> resultList = new ArrayList<>();
+            while (it.hasNext()) {
+                resultList.add(es.submit(() -> {
+                    boolean isReachAble = false;
+                    SearchHit hit = (SearchHit) it.next();
+                    Link link = new Link();
+                    Map<String, Object> map = hit.getSourceAsMap();
+                    List<String> getways = (List<String>) map.get("gateway");
+                    //一旦能连通其中任一网关则代表连接成功
+                    for (String getway : getways) {
+                        if (isIpReachable(getway)) {
+                            isReachAble = true;
+                            break;
+                        }
+                    }
+                    link.setArea((String) map.get("area"));
+                    link.setIsLink(isReachAble ? 1 : 0);
+                    links.add(link);
+                    return "task " + map.get("area") + " completed.";
+                }));
+            }
+            System.out.println(resultList);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return links;
+    }*/
 
     /**
      * 判断指定ip的连通性.
@@ -101,11 +216,14 @@ public class ElasticController {
      * @return 是否通
      */
     public boolean isIpReachable(String ip) {
+        if (StringUtils.isBlank(ip)) {
+            return false;
+        }
         boolean isIpReachable = false;
         InetAddress address;
         try {
             address = InetAddress.getByName(ip);
-            isIpReachable = address.isReachable(1000);
+            isIpReachable = address.isReachable(800);
             System.out.println("isIpReachable: " + isIpReachable);
         } catch (IOException e) {
             e.printStackTrace();
