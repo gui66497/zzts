@@ -57,4 +57,68 @@ public class Constant {
 
     public static final String VIRUS_INDEX = "virus_12j-*";
 
+    public static final String SNMP_DATA_INDEX = "snmp_data_12j-*";
+
+    /**
+     * 交换机ip
+     */
+    public static final String SWITCH_IP = "192.168.1.1";
+
+    /**
+     * 交换机协议
+     */
+    public static final String COMMUNITY = "123qweASD";
+
+    /**
+     * 交换机流量存储最大值 2^32
+     */
+    public static final long SNMP_MAX_DATA = 4294967296L;
+
+    /**
+     * oid的枚举
+     */
+    public enum Oid {
+
+        /**
+         * 交换机名称
+         */
+        sysName(".1.3.6.1.2.1.1.5.0"),
+
+        /**
+         * 接口的对应的文字描述
+         */
+        ipDescr(".1.3.6.1.2.1.2.2.1.2 "),
+
+        /**
+         * 接口输入值
+         */
+        ifInOctets(".1.3.6.1.2.1.2.2.1.10"),
+
+        /**
+         * 接口输出值
+         */
+        ifOutOctets(".1.3.6.1.2.1.2.2.1.16");
+
+        /**
+         * 对应的oid值
+         */
+        private String value;
+
+        /**
+         * 构造方法
+         * @param value
+         */
+        private Oid(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+    }
+
 }

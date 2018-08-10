@@ -24,6 +24,7 @@
 		<java.version>1.8</java.version>
         <elasticsearch.version>6.2.2</elasticsearch.version>
         <commons-io.version>2.5</commons-io.version>
+		<snmp.version>2.6.3</snmp.version>
 	</properties>
 
 	<dependencies>
@@ -76,6 +77,15 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
 			<version>5.0.7.RELEASE</version>
+		</dependency>
+        <dependency>
+            <groupId>org.snmp4j</groupId>
+            <artifactId>snmp4j</artifactId>
+            <version>${snmp.version}</version>
+        </dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
 		</dependency>
 	</dependencies>
 

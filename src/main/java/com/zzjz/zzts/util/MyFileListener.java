@@ -18,7 +18,7 @@ public class MyFileListener implements FileAlterationListener {
 
     @Override
     public void onStart(FileAlterationObserver fileAlterationObserver) {
-        LOGGER.info("MyFileListener 启动");
+        //LOGGER.info("MyFileListener 启动");
     }
 
     @Override
