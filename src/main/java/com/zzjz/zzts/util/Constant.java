@@ -70,6 +70,11 @@ public class Constant {
     public static final String COMMUNITY = "123qweASD";
 
     /**
+     * 需要监控的交换机端口
+     */
+    public static final String SWITCH_PORT = "GigabitEthernet1/0/1";
+
+    /**
      * 交换机流量存储最大值 2^32
      */
     public static final long SNMP_MAX_DATA = 4294967296L;
