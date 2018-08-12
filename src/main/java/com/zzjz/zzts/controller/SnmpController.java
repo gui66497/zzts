@@ -1,5 +1,6 @@
 package com.zzjz.zzts.controller;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.zzjz.zzts.util.Constant;
 import com.zzjz.zzts.util.SnmpData;
@@ -12,11 +13,14 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +33,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,11 +58,9 @@ public class SnmpController {
     /**
      * 每过1分钟 获取交换机输入流量和输出流量并存到es中
      */
-    //@Scheduled(cron = "0 0/1 * * * *")
-    public void timer(){
-        //获取当前时间
-        LocalDateTime localDateTime =LocalDateTime.now();
-        System.out.println("当前时间为:" + localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+    @Scheduled(cron = "0 0/2 * * * *")
+    public void timer() {
+        System.out.println("当前时间为:" + new DateTime().toString("yyyy-MM:dd HH:mm:ss"));
 
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
@@ -81,7 +83,7 @@ public class SnmpController {
             inJsonMap.put("port_value", Long.parseLong(v));
             inJsonMap.put("oid", k);
             inJsonMap.put("flow_type", "in");
-            inJsonMap.put("insert_time",  new Date());
+            inJsonMap.put("insert_time", new Date());
             request.add(new IndexRequest("snmp_data_12j-" + dayStr, "doc").source(inJsonMap));
         });
         Map<String, Object> outJsonMap = new HashMap<>();
@@ -93,14 +95,14 @@ public class SnmpController {
             outJsonMap.put("port_value", Long.parseLong(v));
             outJsonMap.put("oid", k);
             outJsonMap.put("flow_type", "out");
-            outJsonMap.put("insert_time",  new Date());
+            outJsonMap.put("insert_time", new Date());
             request.add(new IndexRequest("snmp_data_12j-" + dayStr, "doc").source(outJsonMap));
         });
 
         BulkResponse bulkResponse;
         try {
             bulkResponse = client.bulk(request);
-            LOGGER.info("snmp插入执行结果:" +  (bulkResponse.hasFailures() ? "有错误" : "成功"));
+            LOGGER.info("snmp插入执行结果:" + (bulkResponse.hasFailures() ? "有错误" : "成功"));
             LOGGER.info("snmp插入执行用时:" + bulkResponse.getTook().getMillis() + "毫秒");
         } catch (IOException e) {
             e.printStackTrace();
@@ -111,6 +113,7 @@ public class SnmpController {
 
     /**
      * snmpwalk指定动作
+     *
      * @param action 动作
      * @return 结果
      */
@@ -125,6 +128,7 @@ public class SnmpController {
 
     /**
      * 获取指定端口指定时间段的输入输出流量.
+     *
      * @param timeStr 时间如1h 7h 1d
      * @return 流量
      */
@@ -152,9 +156,10 @@ public class SnmpController {
 
     /**
      * 计算出指定端口,指定时间到现在的的总流量.
+     *
      * @param flowType 输入或输出
      * @param portName 端口名
-     * @param oldTime 时间
+     * @param oldTime  时间
      * @return 流量
      */
     private long calData(String flowType, String portName, String oldTime) {
@@ -166,8 +171,8 @@ public class SnmpController {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(10000);
         searchSourceBuilder.query(QueryBuilders.boolQuery()
-                .must(QueryBuilders.termsQuery("flow_type",flowType))
-                .must(QueryBuilders.matchPhraseQuery("port_name",portName))
+                .must(QueryBuilders.termsQuery("flow_type", flowType))
+                .must(QueryBuilders.matchPhraseQuery("port_name", portName))
                 .must(QueryBuilders.rangeQuery("insert_time")
                         .format(format).gte(oldTime).timeZone("Asia/Shanghai")));
         searchSourceBuilder.sort(SortBuilders.fieldSort("insert_time").order(SortOrder.ASC));
@@ -178,16 +183,16 @@ public class SnmpController {
             int spill = spillCount(hits);
             if (spill == 0) {
                 //数据没有溢出 直接用最后时间点值-开始时间点值
-                long res = Long.valueOf(hits.getAt((int) (hits.totalHits-1)).getSourceAsMap().get("port_value").toString()) -
+                long res = Long.valueOf(hits.getAt((int) (hits.totalHits - 1)).getSourceAsMap().get("port_value").toString()) -
                         Long.valueOf(hits.getAt(0).getSourceAsMap().get("port_value").toString());
                 return res;
 
             } else {
                 //出现了溢出数据 val = （spill-1）*max+lastVal+（max-firstVal）
-                LOGGER.error("出现了溢出数据！！！！！！！！！！！！！！！！");
+                LOGGER.warn("出现了溢出数据！！！！！！！！！！！！！！！！");
                 long firstVal = Long.valueOf(hits.getAt(0).getSourceAsMap().get("port_value").toString());
-                long lastVal = Long.valueOf(hits.getAt((int) (hits.totalHits-1)).getSourceAsMap().get("port_value").toString());
-                long res = (spill - 1)*Constant.SNMP_MAX_DATA + lastVal + (Constant.SNMP_MAX_DATA - firstVal);
+                long lastVal = Long.valueOf(hits.getAt((int) (hits.totalHits - 1)).getSourceAsMap().get("port_value").toString());
+                long res = (spill - 1) * Constant.SNMP_MAX_DATA + lastVal + (Constant.SNMP_MAX_DATA - firstVal);
                 return res;
             }
         } catch (IOException e) {
@@ -198,20 +203,41 @@ public class SnmpController {
 
     /**
      * 计算溢出次数
+     *
      * @return 次数
      */
     int spillCount(SearchHits hits) {
         int spill = 0;
         for (int i = 0; i < hits.totalHits; i++) {
             Long nowVal = Long.valueOf(hits.getAt(i).getSourceAsMap().get("port_value").toString());
-            Long preVal = i == 0 ? 0 : Long.valueOf(hits.getAt(i-1).getSourceAsMap().get("port_value").toString());
-            if ((nowVal - preVal) < 0) { spill ++; }
+            Long preVal = i == 0 ? 0 : Long.valueOf(hits.getAt(i - 1).getSourceAsMap().get("port_value").toString());
+            if ((nowVal - preVal) < 0) {
+                spill++;
+            }
+        }
+        return spill;
+    }
+
+    /**
+     * 计算溢出次数
+     *
+     * @return 次数
+     */
+    int spillCount(List<Long> vals) {
+        int spill = 0;
+        for (int i = 0; i < vals.size(); i++) {
+            Long nowVal = vals.get(i);
+            Long preVal = i == 0 ? 0L : vals.get(i - 1);
+            if ((nowVal - preVal) < 0) {
+                spill++;
+            }
         }
         return spill;
     }
 
     /**
      * 获取指定时间到现在的流量趋势(包括输入,输出,总计)
+     *
      * @param hour 时间的小时数
      * @return 流量
      */
@@ -229,24 +255,59 @@ public class SnmpController {
         List<String> timeList = new ArrayList<>();
         //间隔 hour*10
         int interval = hour * 10;
-        for (int i = 0; i <= split; i++) {
-            timeList.add(now.minusMinutes((split - i) * interval).toString(format));
+        for (int i = 0; i <= split + 1; i++) {
+            //第一位的时间为辅助计算用 最后应remove
+            timeList.add(now.minusMinutes((split - i + 1) * interval).toString(format));
         }
-        List<Long> valList = new ArrayList<>();
-        for (int i = 0; i <= split; i++) {
-            valList.add(calAverageData("in", Constant.SWITCH_PORT, timeList.get(i), timeList.get(i + 1)));
+        Map<String, Long> inMap = calDataByTimeList(timeList, "in", Constant.SWITCH_PORT);
+        Map<String, Long> outMap = calDataByTimeList(timeList, "out", Constant.SWITCH_PORT);
+        JsonObject oJson = new JsonObject();
+        //{"type":"输入", "data":[{"time1":"01:00", "val":100}]}
+        //转成前端需要的格式
+        JsonArray timeArray = new JsonArray();
+        for (int i = 1; i < timeList.size(); i++) {
+             timeArray.add(timeList.get(i));
         }
+        oJson.add("timeArr", timeArray);
+        JsonArray inArray = new JsonArray();
+        JsonArray outArray = new JsonArray();
+        inMap.forEach((k, v) -> inArray.add(v));
+        outMap.forEach((k, v) -> outArray.add(v));
+        //输入
+        JsonObject inJson = new JsonObject();
+        inJson.addProperty("type", "in");
+        inJson.add("datas", inArray);
+        //输出
+        JsonObject outJson = new JsonObject();
+        outJson.addProperty("type", "out");
+        outJson.add("datas", outArray);
+        //总计
+        JsonArray allArray = new JsonArray();
+        inMap.forEach((k, v) -> {
+            allArray.add(v + outMap.get(k));
+        });
+        JsonObject allJson = new JsonObject();
+        allJson.addProperty("type", "all");
+        allJson.add("datas", allArray);
 
-        return timeList.toString();
+        JsonArray dataArray = new JsonArray();
+        dataArray.add(inJson);
+        dataArray.add(outJson);
+        dataArray.add(allJson);
 
+        oJson.add("timeData", dataArray);
+        return oJson.toString();
+    }
 
-        /*String portName = Constant.SWITCH_PORT;
-        String oldTime = null;
-        if ("1h".equals(timeStr)) {
-            oldTime = new DateTime().minusHours(1).toString(format);
-        }
-        LOGGER.info("查询的起始时间为" + oldTime);
-        //先将其间的所有数据全查出来
+    /**
+     * 根据时间列表计算每个时间点的流量
+     * @param timeList 时间list
+     * @param flowType 类型
+     * @param portName 端口
+     * @return map
+     */
+    Map<String, Long> calDataByTimeList(List<String> timeList, String flowType, String portName) {
+        String format = "yyyy-MM-dd HH:mm:ss";
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
@@ -254,23 +315,59 @@ public class SnmpController {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(10000);
         searchSourceBuilder.query(QueryBuilders.boolQuery()
-                .must(QueryBuilders.termsQuery("flow_type", "in"))
+                .must(QueryBuilders.termsQuery("flow_type", flowType))
                 .must(QueryBuilders.matchPhraseQuery("port_name", portName))
                 .must(QueryBuilders.rangeQuery("insert_time")
-                        .format(format).gte(oldTime).timeZone("Asia/Shanghai")));
+                        .format(format).gte(timeList.get(0)).lte(timeList.get(timeList.size() - 1)).timeZone("Asia/Shanghai")));
         searchSourceBuilder.sort(SortBuilders.fieldSort("insert_time").order(SortOrder.ASC));
         searchRequest.source(searchSourceBuilder);
-
-        return json.toString();*/
+        Map<String, List<Long>> resMap = new LinkedHashMap<>();
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            Iterator it = searchResponse.getHits().iterator();
+            while (it.hasNext()) {
+                SearchHit hit = (SearchHit) it.next();
+                String hitTime = (String) hit.getSourceAsMap().get("insert_time");
+                int timeIndex = judgeTimeRange(timeList, hitTime);
+                String key = timeList.get(timeIndex + 1);
+                if (resMap.get(key) == null) {
+                    List<Long> valList = new ArrayList<>();
+                    valList.add(Long.valueOf(hit.getSourceAsMap().get("port_value").toString()));
+                    resMap.put(key, valList);
+                } else {
+                    List<Long> valList = resMap.get(key);
+                    valList.add(Long.valueOf(hit.getSourceAsMap().get("port_value").toString()));
+                    resMap.put(key, valList);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        LOGGER.info("得到时间点和其对应的流量序列");
+        System.out.println(resMap);
+        Map<String, Long> dataMap = new LinkedHashMap<>();
+        resMap.forEach((k, v) -> {
+            int spill = spillCount(v);
+            if (spill == 0) {
+                //数据没有溢出 直接用最后时间点值-开始时间点值
+                dataMap.put(k, (v.get(v.size() - 1) - v.get(0)));
+            } else {
+                //出现了溢出数据 val = （spill-1）*max+lastVal+（max-firstVal）
+                LOGGER.warn("出现了溢出数据！！！！！！！！！！！！！！！！");
+                Long val = (spill - 1) * Constant.SNMP_MAX_DATA + v.get(v.size() - 1) +  (Constant.SNMP_MAX_DATA - v.get(0));
+                dataMap.put(k, val);
+            }
+        });
+        return dataMap;
     }
-
 
     /**
      * 查询指定时间范围内的平均流量.
+     *
      * @param flowType 流量类型
      * @param portName 端口
-     * @param oldTime >时间
-     * @param newTime <时间
+     * @param oldTime  >时间
+     * @param newTime  <时间
      * @return 流量
      */
     long calAverageData(String flowType, String portName, String oldTime, String newTime) {
@@ -282,8 +379,8 @@ public class SnmpController {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(10000);
         searchSourceBuilder.query(QueryBuilders.boolQuery()
-                .must(QueryBuilders.termsQuery("flow_type",flowType))
-                .must(QueryBuilders.matchPhraseQuery("port_name",portName))
+                .must(QueryBuilders.termsQuery("flow_type", flowType))
+                .must(QueryBuilders.matchPhraseQuery("port_name", portName))
                 .must(QueryBuilders.rangeQuery("insert_time")
                         .format(format).gte(oldTime).lte(newTime).timeZone("Asia/Shanghai")));
 
@@ -292,26 +389,45 @@ public class SnmpController {
         try {
             SearchResponse searchResponse = client.search(searchRequest);
             SearchHits hits = searchResponse.getHits();
-            assert hits.totalHits > 1;
-            int spill = spillCount(hits);
-            if (spill == 0) {
-                //数据没有溢出 直接用最后时间点值-开始时间点值
-                long res = Long.valueOf(hits.getAt((int) (hits.totalHits-1)).getSourceAsMap().get("port_value").toString()) -
-                        Long.valueOf(hits.getAt(0).getSourceAsMap().get("port_value").toString());
-                return res / (hits.totalHits - 1);
+            if (hits.totalHits > 1) {
+                int spill = spillCount(hits);
+                if (spill == 0) {
+                    //数据没有溢出 直接用最后时间点值-开始时间点值
+                    long res = Long.valueOf(hits.getAt((int) (hits.totalHits - 1)).getSourceAsMap().get("port_value").toString()) -
+                            Long.valueOf(hits.getAt(0).getSourceAsMap().get("port_value").toString());
+                    return res / (hits.totalHits - 1);
 
-            } else {
-                //出现了溢出数据 val = （spill-1）*max+lastVal+（max-firstVal）
-                LOGGER.error("出现了溢出数据！！！！！！！！！！！！！！！！");
-                long firstVal = Long.valueOf(hits.getAt(0).getSourceAsMap().get("port_value").toString());
-                long lastVal = Long.valueOf(hits.getAt((int) (hits.totalHits-1)).getSourceAsMap().get("port_value").toString());
-                long res = (spill - 1)*Constant.SNMP_MAX_DATA + lastVal + (Constant.SNMP_MAX_DATA - firstVal);
-                return res / (hits.totalHits - 1);
+                } else {
+                    //出现了溢出数据 val = （spill-1）*max+lastVal+（max-firstVal）
+                    LOGGER.error("出现了溢出数据！！！！！！！！！！！！！！！！");
+                    long firstVal = Long.valueOf(hits.getAt(0).getSourceAsMap().get("port_value").toString());
+                    long lastVal = Long.valueOf(hits.getAt((int) (hits.totalHits - 1)).getSourceAsMap().get("port_value").toString());
+                    long res = (spill - 1) * Constant.SNMP_MAX_DATA + lastVal + (Constant.SNMP_MAX_DATA - firstVal);
+                    return res / (hits.totalHits - 1);
+                }
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    /**
+     * 判断所给时间的区间.
+     * @param timeList timeList
+     * @param time time
+     * @return 序号
+     */
+    int judgeTimeRange(List<String> timeList, String time) {
+        DateTimeFormatter format = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+        DateTime t = new DateTime(time);
+        for (int i = 0; i < timeList.size(); i++) {
+            DateTime oldTime = DateTime.parse(timeList.get(i), format);
+            DateTime newTime = DateTime.parse(timeList.get(i + 1), format);
+            if (t.isAfter(oldTime) && t.isBefore(newTime) || t.equals(oldTime)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
