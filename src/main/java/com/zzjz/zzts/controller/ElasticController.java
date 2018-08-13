@@ -1,6 +1,8 @@
 package com.zzjz.zzts.controller;
 
+import com.google.gson.JsonObject;
 import com.zzjz.zzts.Entity.Link;
+import com.zzjz.zzts.service.ElasticService;
 import com.zzjz.zzts.util.Constant;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
@@ -16,6 +18,7 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -24,7 +27,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +53,9 @@ import java.util.concurrent.Future;
 public class ElasticController {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ElasticController.class);
+
+    @Autowired
+    ElasticService elasticService;
 
     /**
      * 判断指定区域的连通性.
@@ -274,41 +279,22 @@ public class ElasticController {
      * @return 数据
      */
     @GET
-    @Path("realMonitor")
+    @Path("realMonitor/{hours}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, String> realMonitor() {
-        Map<String, String> resMap = new LinkedHashMap<>();
+    public String realMonitor(@PathParam("hours") int hours) {
+        JsonObject bigJson = new JsonObject();
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
-        //实时监控默认按最近24小时来
         String format = "yyyy-MM-dd HH:mm:ss";
-        String oldTime = DateTime.now().minusHours(Constant.MONITOR_HOUR).toString(format);
+        String oldTime = DateTime.now().minusHours(hours).toString(format);
         LOGGER.info("查询的起始时间为" + oldTime);
-        //1.防火墙流量数据(字节)
-        int firewallData = 0;
-        SearchRequest searchRequest = new SearchRequest(Constant.FIREWALL_INDEX);
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.query(QueryBuilders.boolQuery()
-                            .must(QueryBuilders.existsQuery("receivePacket"))
-                            .must(QueryBuilders.rangeQuery("@timestamp")
-                                        .format(format).gte(oldTime).timeZone("Asia/Shanghai")));
-        searchRequest.source(searchSourceBuilder);
-        try {
-            SearchResponse searchResponse = client.search(searchRequest);
-            Iterator it = searchResponse.getHits().iterator();
-            while (it.hasNext()) {
-                SearchHit hit = (SearchHit) it.next();
-                int receivePacket = (int) hit.getSourceAsMap().get("receivePacket");
-                int sendPacket = (int) hit.getSourceAsMap().get("sendPacket");
-                firewallData += (receivePacket + sendPacket);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println("防火墙流量:" + bytes2kb(firewallData));
-        resMap.put("防火墙流量", bytes2kb(firewallData));
+        //1.交换机流量数据
+        JsonObject jsonObject = elasticService.snmpData(hours, Constant.SWITCH_PORT);
+
+        System.out.println("网络总流量:" + jsonObject);
+        bigJson.add("网络总流量", jsonObject);
         //2.终端告警数量
         SearchRequest searchRequest2 = new SearchRequest(Constant.NWZDJG_INDEX);
         SearchSourceBuilder searchSourceBuilder2 = new SearchSourceBuilder();
@@ -323,7 +309,7 @@ public class ElasticController {
             SearchResponse searchResponse = client.search(searchRequest2);
             long nwzdjgCount = searchResponse.getHits().totalHits;
             System.out.println("终端告警:" + nwzdjgCount);
-            resMap.put("终端告警", String.valueOf(nwzdjgCount));
+            bigJson.addProperty("终端告警", nwzdjgCount);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -339,7 +325,7 @@ public class ElasticController {
             SearchResponse searchResponse = client.search(searchRequest3);
             long rqjcCount = searchResponse.getHits().totalHits;
             System.out.println("入侵检测:" + rqjcCount);
-            resMap.put("入侵告警", String.valueOf(rqjcCount));
+            bigJson.addProperty("入侵检测", rqjcCount);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -354,7 +340,7 @@ public class ElasticController {
             SearchResponse searchResponse = client.search(searchRequest4);
             long virusCount = searchResponse.getHits().totalHits;
             System.out.println("病毒检测:" + virusCount);
-            resMap.put("防病毒告警", String.valueOf(virusCount));
+            bigJson.addProperty("防病毒告警", virusCount);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -366,7 +352,7 @@ public class ElasticController {
                 e.printStackTrace();
             }
         }
-        return resMap;
+        return bigJson.toString();
     }
 
     /**
@@ -435,36 +421,6 @@ public class ElasticController {
             sortedMap.put(tmpEntry.getKey(), tmpEntry.getValue());
         }
         return sortedMap;
-    }
-
-    /**
-     * byte(字节)根据长度转成kb(千字节)和mb(兆字节)或gb
-     *
-     * @param bytes 字节
-     * @return string
-     */
-    public static String bytes2kb(long bytes) {
-        BigDecimal filesize = new BigDecimal(bytes);
-        BigDecimal gigabyte = new BigDecimal(1024 * 1024 * 1024);
-        float returnValue = filesize.divide(gigabyte, 2, BigDecimal.ROUND_UP)
-                .floatValue();
-        if (returnValue > 1) {
-            return (returnValue + "GB");
-        }
-        BigDecimal megabyte = new BigDecimal(1024 * 1024);
-        returnValue = filesize.divide(megabyte, 2, BigDecimal.ROUND_UP)
-                .floatValue();
-        if (returnValue > 1) {
-            return (returnValue + "MB");
-        }
-        BigDecimal kilobyte = new BigDecimal(1024);
-        returnValue = filesize.divide(kilobyte, 2, BigDecimal.ROUND_UP)
-                .floatValue();
-        return (returnValue + "KB");
-    }
-
-    public static void main(String[] args) {
-        System.out.println(bytes2kb(212000));
     }
 
 }

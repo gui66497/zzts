@@ -1,5 +1,7 @@
 package com.zzjz.zzts.util;
 
+import java.math.BigDecimal;
+
 /**
  * @author 房桂堂
  * @description Constant
@@ -126,4 +128,69 @@ public class Constant {
         }
     }
 
+    /**
+     * byte(字节)根据长度转成kb(千字节)和mb(兆字节)或gb
+     * @param bytes 字节
+     * @return String
+     */
+    public static String bytes2kb(long bytes) {
+        BigDecimal filesize = new BigDecimal(bytes);
+        BigDecimal gigabyte = new BigDecimal(1024 * 1024 * 1024);
+        float returnValue = filesize.divide(gigabyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+        if (returnValue > 1) {
+            return (returnValue + "GB");
+        }
+        BigDecimal megabyte = new BigDecimal(1024 * 1024);
+        returnValue = filesize.divide(megabyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+        if (returnValue > 1) {
+            return (returnValue + "MB");
+        }
+        BigDecimal kilobyte = new BigDecimal(1024);
+        returnValue = filesize.divide(kilobyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+        return (returnValue + "KB");
+    }
+
+    /**
+     * bit(位)根据长度转成kb(千字节)和mb(兆字节)或gb
+     * @param bytes 字节
+     * @return String
+     */
+    public static String bit2kb(long bytes) {
+        BigDecimal filesize = new BigDecimal(bytes);
+        BigDecimal gigabyte = new BigDecimal( 8589934592L);
+        float returnValue = filesize.divide(gigabyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+        if (returnValue > 1) {
+            return (returnValue + "GB");
+        }
+        BigDecimal megabyte = new BigDecimal(8 * 1024 * 1024);
+        returnValue = filesize.divide(megabyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+        if (returnValue > 1) {
+            return (returnValue + "MB");
+        }
+        BigDecimal kilobyte = new BigDecimal(8 * 1024);
+        returnValue = filesize.divide(kilobyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+        return (returnValue + "KB");
+    }
+
+    /**
+     * bit转mb
+     * @param bits 位
+     * @return M
+     */
+    public static float bitToMB(long bits) {
+        BigDecimal size = new BigDecimal(bits);
+        BigDecimal megabyte = new BigDecimal(8* 1024 * 1024);
+        return size.divide(megabyte, 2, BigDecimal.ROUND_UP)
+                .floatValue();
+    }
+
+    public static void main(String[] args) {
+        System.out.println(bitToMB(4722827754L));
+    }
 }
