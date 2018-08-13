@@ -38,9 +38,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
@@ -56,6 +56,9 @@ public class ElasticController {
 
     @Autowired
     ElasticService elasticService;
+
+    @Autowired
+    ExecutorService executorService;
 
     /**
      * 判断指定区域的连通性.
@@ -109,10 +112,10 @@ public class ElasticController {
      * @return 连接情况
      */
     @GET
-    @Path("isReachAbleAll")
+    @Path("isReachAbleAll2")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Link> isReachAbleAll() {
+    public List<Link> isReachAbleAll2() {
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
@@ -163,11 +166,11 @@ public class ElasticController {
      * 获取所有节点的连接情况(优化版)
      * @return
      */
-    /*@GET
-    @Path("isReachAbleAll2")
+    @GET
+    @Path("isReachAbleAll")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Link> isReachAbleAll2() {
+    public List<Link> isReachAbleAll() {
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
@@ -179,15 +182,22 @@ public class ElasticController {
         try {
             SearchResponse searchResponse = client.search(searchRequest);
             Iterator it = searchResponse.getHits().iterator();
-            ExecutorService es = Executors.newFixedThreadPool(10);
+
+            CompletionService<String> pool = new ExecutorCompletionService<String>(executorService);
             List<Future<String>> resultList = new ArrayList<>();
             while (it.hasNext()) {
-                resultList.add(es.submit(() -> {
+                SearchHit hit = (SearchHit) it.next();
+                Map<String, Object> map = hit.getSourceAsMap();
+                List<String> getways = (List<String>) map.get("gateway");
+                String area = (String) map.get("area");
+                if ("上海".equals(area)) {
+                    //过滤掉上海地区
+                    continue;
+                }
+                resultList.add(pool.submit(() -> {
+                    long t1 = System.currentTimeMillis();
                     boolean isReachAble = false;
-                    SearchHit hit = (SearchHit) it.next();
                     Link link = new Link();
-                    Map<String, Object> map = hit.getSourceAsMap();
-                    List<String> getways = (List<String>) map.get("gateway");
                     //一旦能连通其中任一网关则代表连接成功
                     for (String getway : getways) {
                         if (isIpReachable(getway)) {
@@ -198,12 +208,16 @@ public class ElasticController {
                     link.setArea((String) map.get("area"));
                     link.setIsLink(isReachAble ? 1 : 0);
                     links.add(link);
-                    return "task " + map.get("area") + " completed.";
+                    long t2 = System.currentTimeMillis();
+                    return "task " + map.get("area") + " completed.耗时：" + (t2 - t1);
                 }));
             }
-            System.out.println(resultList);
+            for(int i = 0; i < resultList.size(); i++){
+                String result = pool.take().get();
+                System.out.println(result);
+            }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             try {
@@ -213,7 +227,7 @@ public class ElasticController {
             }
         }
         return links;
-    }*/
+    }
 
     /**
      * 判断指定ip的连通性.
@@ -228,8 +242,8 @@ public class ElasticController {
         InetAddress address;
         try {
             address = InetAddress.getByName(ip);
-            isIpReachable = address.isReachable(800);
-            System.out.println("isIpReachable: " + isIpReachable);
+            isIpReachable = address.isReachable(500);
+            //System.out.println("isIpReachable: " + isIpReachable);
         } catch (IOException e) {
             e.printStackTrace();
         }
