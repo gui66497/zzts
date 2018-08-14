@@ -60,7 +60,7 @@ public class SnmpController {
     ElasticService elasticService;
 
     /**
-     * 每过1分钟 获取交换机输入流量和输出流量并存到es中
+     * 每过2分钟 获取交换机输入流量和输出流量并存到es中
      */
     //@Scheduled(cron = "0 0/2 * * * *")
     public void timer() {
@@ -177,7 +177,10 @@ public class SnmpController {
         //转成前端需要的格式
         JsonArray timeArray = new JsonArray();
         for (int i = 1; i < timeList.size(); i++) {
-             timeArray.add(timeList.get(i));
+            //Todo 这里需要考虑某个时间点没有数据的情况 这里暂时将key删除
+            if (inMap.keySet().contains(timeList.get(i))) {
+                timeArray.add(timeList.get(i));
+            }
         }
         oJson.add("timeArr", timeArray);
         JsonArray inArray = new JsonArray();
