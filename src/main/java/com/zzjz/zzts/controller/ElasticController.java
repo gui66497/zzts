@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
@@ -56,9 +57,6 @@ public class ElasticController {
 
     @Autowired
     ElasticService elasticService;
-
-    @Autowired
-    ExecutorService executorService;
 
     /**
      * 判断指定区域的连通性.
@@ -182,7 +180,7 @@ public class ElasticController {
         try {
             SearchResponse searchResponse = client.search(searchRequest);
             Iterator it = searchResponse.getHits().iterator();
-
+            ExecutorService executorService = Executors.newFixedThreadPool(4);
             CompletionService<String> pool = new ExecutorCompletionService<String>(executorService);
             List<Future<String>> resultList = new ArrayList<>();
             while (it.hasNext()) {
@@ -212,6 +210,8 @@ public class ElasticController {
                     return "task " + map.get("area") + " completed.耗时：" + (t2 - t1);
                 }));
             }
+            //关闭线程池
+            executorService.shutdown();
             for(int i = 0; i < resultList.size(); i++){
                 String result = pool.take().get();
                 System.out.println(result);

@@ -62,7 +62,7 @@ public class SnmpController {
     /**
      * 每过1分钟 获取交换机输入流量和输出流量并存到es中
      */
-    @Scheduled(cron = "0 0/2 * * * *")
+    //@Scheduled(cron = "0 0/2 * * * *")
     public void timer() {
         System.out.println("当前时间为:" + new DateTime().toString("yyyy-MM:dd HH:mm:ss"));
 
@@ -195,7 +195,7 @@ public class SnmpController {
         //总计
         JsonArray allArray = new JsonArray();
         for (int i = 0; i < inArray.size(); i++) {
-            allArray.add(inArray.get(i).getAsFloat() + outArray.get(i).getAsFloat());
+            allArray.add(inArray.get(i).getAsBigDecimal().add(outArray.get(i).getAsBigDecimal()));
         }
         JsonObject allJson = new JsonObject();
         allJson.addProperty("type", "all");

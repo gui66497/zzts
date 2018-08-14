@@ -39,9 +39,9 @@ public class ElasticServiceImpl implements ElasticService {
         long outData = calData("out", portName, oldTime);
         long allData = inData + outData;
         //将数据可读化
-        String inDataRead = Constant.bit2kb(inData);
-        String outDataRead = Constant.bit2kb(outData);
-        String allDataRead = Constant.bit2kb(allData);
+        String inDataRead = Constant.bit2kb(inData, 1);
+        String outDataRead = Constant.bit2kb(outData, 1);
+        String allDataRead = Constant.bit2kb(allData, 1);
         JsonObject json = new JsonObject();
         json.addProperty("in", inDataRead);
         json.addProperty("out", outDataRead);
