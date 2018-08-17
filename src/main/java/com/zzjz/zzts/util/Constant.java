@@ -1,6 +1,16 @@
 package com.zzjz.zzts.util;
 
 import java.math.BigDecimal;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 房桂堂
@@ -194,7 +204,37 @@ public class Constant {
                 .floatValue();
     }
 
-    public static void main(String[] args) {
-        System.out.println(bit2kb(49222782713954L, 0));
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
+        ExecutorService executorService = Executors.newFixedThreadPool(100);
+        CompletionService<String> pool = new ExecutorCompletionService<>(executorService);
+        long t1 = System.currentTimeMillis();
+        AtomicInteger integer = new AtomicInteger(0);
+        System.out.println( " 正在检测,请等待: " );
+        List<Future<String>> resultList = new ArrayList<>();
+        for ( int  i = 1 ;i < 244 ;i ++ )
+        {
+            String T = "192.168.1." + i;
+            resultList.add(pool.submit(() -> {
+                InetAddress address  =  InetAddress.getByName(T);
+                // 1000 ms
+                if (address.isReachable(1000)) {
+                    integer.incrementAndGet();
+                    System.out.print(" ");
+                    System.out.println("IP地址: " + T + "主机名:" + address.getHostName());
+                    return "IP地址: " + T + "主机名:" + address.getHostName();
+                }
+                return "";
+            }));
+
+        }
+        executorService.shutdown();
+        for(int i = 0; i < resultList.size(); i++){
+            String result = pool.take().get();
+            System.out.println(result);
+        }
+        System.out.println( "共发现主机:" + integer);
+
+        long t2 = System.currentTimeMillis();
+        System.out.println("共耗时:" + (t2 -t1));
     }
 }

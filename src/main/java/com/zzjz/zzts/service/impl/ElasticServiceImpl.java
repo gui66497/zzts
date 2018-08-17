@@ -85,6 +85,12 @@ public class ElasticServiceImpl implements ElasticService {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return 0;
     }

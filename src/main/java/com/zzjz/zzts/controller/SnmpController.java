@@ -111,7 +111,11 @@ public class SnmpController {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        try {
+            client.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         System.out.println(11);
     }
 
@@ -256,6 +260,12 @@ public class SnmpController {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         LOGGER.info("得到时间点和其对应的流量序列");
         System.out.println(resMap);
@@ -322,6 +332,12 @@ public class SnmpController {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return 0;
     }

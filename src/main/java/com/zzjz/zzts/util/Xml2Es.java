@@ -88,6 +88,12 @@ public class Xml2Es {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -130,6 +136,7 @@ public class Xml2Es {
         BulkResponse bulkResponse = client.bulk(request);
         LOGGER.info("Eventlog插入执行结果:" +  (bulkResponse.hasFailures() ? "有错误" : "成功"));
         LOGGER.info("Eventlog插入执行用时:" + bulkResponse.getTook().getMillis() + "毫秒");
+        client.close();
     }
 
     public static void main(String[] args) throws IOException {

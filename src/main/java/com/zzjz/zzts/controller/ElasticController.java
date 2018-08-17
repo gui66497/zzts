@@ -281,9 +281,14 @@ public class ElasticController {
             resMap.put("其它", (Integer) map.get("win2k") + (Integer) map.get("vista") +
                     (Integer) map.get("win2008") + (Integer) map.get("win95") +
                     (Integer) map.get("win98") + (Integer) map.get("winnt"));
-            client.close();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return resMap;
     }
@@ -416,6 +421,12 @@ public class ElasticController {
             client.close();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         //将map结果统计个数并排序
         // 降序比较器
@@ -435,6 +446,32 @@ public class ElasticController {
             sortedMap.put(tmpEntry.getKey(), tmpEntry.getValue());
         }
         return sortedMap;
+    }
+
+    public static void main(String[] args) {
+        try  {
+            long t1 = System.currentTimeMillis();
+            int  count = 0 ;
+            System.out.println( " 正在检测,请等待: " );
+            for ( int  i = 1 ;i < 244 ;i ++ )
+            {
+                String T = "192.168.1." + i;
+                System.out.print( " = ");
+                InetAddress address  =  InetAddress.getByName(T);
+                // 1000 ms
+                if (address.isReachable( 1000 ))
+                {
+                    count ++ ;
+                    System.out.print( " " );
+                    System.out.println( " IP地址:  " + T + "   主机名:  " + address.getHostName());
+                }
+            }
+            long t2 = System.currentTimeMillis();
+            System.out.println( "  共发现主机: " + count);
+            System.out.println( "共耗时：" + (t2 - t1));
+        } catch  (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
