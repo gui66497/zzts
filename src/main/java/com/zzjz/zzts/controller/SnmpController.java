@@ -161,15 +161,15 @@ public class SnmpController {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public String snmpDataTrend(@PathParam("hour") int hour) {
-        //Todo 这里暂时写死时间和端口和拆分数
+        //Todo 这里暂时写死端口和拆分数
         //[{"name":"输入", "data":[1,2,3]},{"name":"输出", "data":[1,4,5]}]
         //默认将时间拆成六份 也就是7个时间点
         int split = 6;
         DateTime now = new DateTime();
         String format = "yyyy-MM-dd HH:mm:ss";
         List<String> timeList = new ArrayList<>();
-        //间隔 hour*10
-        int interval = hour * 10;
+        //间隔 应保证除得进
+        int interval = (hour * 60) / split;
         for (int i = 0; i <= split + 1; i++) {
             //第一位的时间为辅助计算用 最后应remove
             timeList.add(now.minusMinutes((split - i + 1) * interval).toString(format));
