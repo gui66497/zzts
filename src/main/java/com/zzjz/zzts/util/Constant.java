@@ -72,7 +72,7 @@ public class Constant {
     public static final String SNMP_DATA_INDEX = "snmp_data_12j-*";
 
     /**
-     * 交换机ip
+     * 交换机ip1.3.6.1.2.1.2.2.1.10
      */
     public static final String SWITCH_IP = "192.168.1.1";
 
@@ -87,7 +87,7 @@ public class Constant {
     public static final String SWITCH_PORT = "GigabitEthernet1/0/1";
 
     /**
-     * 交换机流量存储最大值 2^32
+     * 32位交换机流量存储最大值 2^32
      */
     public static final long SNMP_MAX_DATA = 4294967296L;
 
@@ -107,12 +107,12 @@ public class Constant {
         ipDescr(".1.3.6.1.2.1.2.2.1.2 "),
 
         /**
-         * 接口输入值
+         * 接口输入值(32位)
          */
         ifInOctets(".1.3.6.1.2.1.2.2.1.10"),
 
         /**
-         * 接口输出值
+         * 接口输出值(32位)
          */
         ifOutOctets(".1.3.6.1.2.1.2.2.1.16");
 
