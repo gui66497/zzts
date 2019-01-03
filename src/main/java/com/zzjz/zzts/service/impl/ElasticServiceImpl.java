@@ -68,6 +68,9 @@ public class ElasticServiceImpl implements ElasticService {
         try {
             SearchResponse searchResponse = client.search(searchRequest);
             SearchHits hits = searchResponse.getHits();
+            if (hits.totalHits == 0) {
+                return 0;
+            }
             int spill = spillCount(hits);
             if (spill == 0) {
                 //数据没有溢出 直接用最后时间点值-开始时间点值
