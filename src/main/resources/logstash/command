@@ -1,0 +1,12 @@
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\vuln_xml_12j.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\zabbix.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\zabbix_test.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\nessus.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\file_operation_trace.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\monitor_service_error.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\service_error_nmap_test.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\nmap.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\snort.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\syslogTest.conf
+
+/home/logstash-6.2.2/bin/logstash -f /home/logstash-6.2.2/my_conf/nmap.conf
