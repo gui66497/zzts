@@ -8,5 +8,7 @@ D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\
 D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\nmap.conf
 D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\snort.conf
 D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\syslogTest.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\unRegularVisit.conf
+D:\zzjz_work\logstash-6.2.2\bin\logstash -f D:\zzjz_work\Projects\zzts\src\main\resources\logstash\test1.conf
 
 /home/logstash-6.2.2/bin/logstash -f /home/logstash-6.2.2/my_conf/nmap.conf
