@@ -12,24 +12,21 @@ public class ResultUtil {
     private static final String DEFAULT_SUCCESS_MESSAGE = "SUCCESS";
 
     public static Result genSuccessResult() {
-        Result result = new Result();
-        result.setCode(ResultCode.SUCCESS);
-        result.setMessage(DEFAULT_SUCCESS_MESSAGE);
-        return result;
+        return new Result()
+                .setCode(ResultCode.SUCCESS)
+                .setMessage(DEFAULT_SUCCESS_MESSAGE);
     }
 
     public static Result genSuccessResult(Object data) {
-        Result result = new Result();
-        result.setCode(ResultCode.SUCCESS);
-        result.setMessage(DEFAULT_SUCCESS_MESSAGE);
-        result.setData(data);
-        return result;
+        return new Result()
+                .setCode(ResultCode.SUCCESS)
+                .setMessage(DEFAULT_SUCCESS_MESSAGE)
+                .setData(data);
     }
 
     public static Result genFailResult(String message) {
-        Result result = new Result();
-        result.setCode(ResultCode.FAIL);
-        result.setMessage(message);
-        return result;
+        return new Result()
+                .setCode(ResultCode.FAIL)
+                .setMessage(message);
     }
 }

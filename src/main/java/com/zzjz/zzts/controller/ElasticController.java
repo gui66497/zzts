@@ -2,6 +2,7 @@ package com.zzjz.zzts.controller;
 
 import com.google.gson.JsonObject;
 import com.zzjz.zzts.Entity.Alarm;
+import com.zzjz.zzts.Entity.ElasticVo;
 import com.zzjz.zzts.Entity.Link;
 import com.zzjz.zzts.Entity.Result;
 import com.zzjz.zzts.Entity.SpecialFocus;
@@ -12,6 +13,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -28,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -466,6 +470,7 @@ public class ElasticController {
         // 时间范围是最近7天
         String format = "yyyy-MM-dd HH:mm:ss";
         String oldTime = DateTime.now().minusDays(7).toString(format);
+        LOGGER.info("开始调用getAlarms接口");
         LOGGER.info("查询的起始时间为" + oldTime);
 
         RestHighLevelClient client = new RestHighLevelClient(
@@ -481,10 +486,12 @@ public class ElasticController {
             String eventType = focus.getEventType();
             String event = focus.getEvent();
 
+            // 过滤掉已处理的
             SearchRequest searchRequest = new SearchRequest(Constant.EVENTLOG_INDEX);
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             searchSourceBuilder.query(QueryBuilders.boolQuery()
                     .must(QueryBuilders.matchPhraseQuery("eventType", eventType))
+                    .mustNot(QueryBuilders.matchPhraseQuery("handled", "已处理"))
                     .must(QueryBuilders.rangeQuery("@timestamp")
                             .format(format).gte(oldTime).timeZone("Asia/Shanghai"))
             );
@@ -507,19 +514,52 @@ public class ElasticController {
                         alarmSet.add(alarm);
                     }
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            client.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return ResultUtil.genSuccessResult(alarmSet);
+    }
+
+    /**
+     * 将制定eventlog数据置为已处理
+     * @param elasticVo elasticVo
+     * @return 结果
+     */
+    @POST
+    @Path("handle")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result handle(ElasticVo elasticVo) {
+        LOGGER.info("开始调用handle接口");
+
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
+        UpdateRequest updateRequest = new UpdateRequest(elasticVo.getIndex(), "doc", elasticVo.getId());
+        Map<String, Object> jsonMap = new HashMap<>();
+        String handleStr = elasticVo.isHandled() ? "已处理" : "未处理";
+        jsonMap.put("handled", handleStr);
+        updateRequest.doc(jsonMap);
+
+        try {
+            UpdateResponse updateResponse = client.update(updateRequest);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResultUtil.genFailResult(e.getMessage());
+        } finally {
+            try {
                 client.close();
             } catch (IOException e) {
                 e.printStackTrace();
-            } finally {
-                try {
-                    client.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
         }
-
-        return ResultUtil.genSuccessResult(alarmSet);
+        return ResultUtil.genSuccessResult();
     }
 
     public static void main(String[] args) {
