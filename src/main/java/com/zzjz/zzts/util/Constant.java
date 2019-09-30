@@ -71,6 +71,10 @@ public class Constant {
 
     public static final String SNMP_DATA_INDEX = "snmp_data_12j-*";
 
+    public static final String EVENTLOG_INDEX = "eventlog_2*";
+
+    public static final String SPECIALFOCUS_INDEX = "specialfocus";
+
     /**
      * 交换机ip1.3.6.1.2.1.2.2.1.10
      */

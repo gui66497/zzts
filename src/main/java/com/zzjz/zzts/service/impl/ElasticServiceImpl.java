@@ -1,6 +1,7 @@
 package com.zzjz.zzts.service.impl;
 
 import com.google.gson.JsonObject;
+import com.zzjz.zzts.Entity.SpecialFocus;
 import com.zzjz.zzts.service.ElasticService;
 import com.zzjz.zzts.util.Constant;
 import org.apache.http.HttpHost;
@@ -9,16 +10,21 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author 房桂堂
@@ -122,6 +128,44 @@ public class ElasticServiceImpl implements ElasticService {
             }
         }
         return spill;
+    }
+
+    @Override
+    public List<SpecialFocus> specialList() {
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
+        SearchRequest searchRequest = new SearchRequest(Constant.SPECIALFOCUS_INDEX);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(10000);
+        searchSourceBuilder.query(QueryBuilders.matchAllQuery());
+        searchRequest.source(searchSourceBuilder);
+        List<SpecialFocus> focusList = new ArrayList<>();
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            SearchHits hits = searchResponse.getHits();
+            Iterator it = searchResponse.getHits().iterator();
+            while (it.hasNext()) {
+                SpecialFocus focus = new SpecialFocus();
+                SearchHit hit = (SearchHit) it.next();
+                Map<String, Object> map = hit.getSourceAsMap();
+                focus.setId(hit.getId());
+                focus.setEventType(map.get("eventType").toString());
+                focus.setEvent(map.get("event").toString());
+                focusList.add(focus);
+            }
+            System.out.println(focusList);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return focusList;
     }
 
 }

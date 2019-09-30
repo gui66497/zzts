@@ -1,9 +1,13 @@
 package com.zzjz.zzts.controller;
 
 import com.google.gson.JsonObject;
+import com.zzjz.zzts.Entity.Alarm;
 import com.zzjz.zzts.Entity.Link;
+import com.zzjz.zzts.Entity.Result;
+import com.zzjz.zzts.Entity.SpecialFocus;
 import com.zzjz.zzts.service.ElasticService;
 import com.zzjz.zzts.util.Constant;
+import com.zzjz.zzts.util.ResultUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
@@ -12,10 +16,12 @@ import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -446,6 +452,74 @@ public class ElasticController {
             sortedMap.put(tmpEntry.getKey(), tmpEntry.getValue());
         }
         return sortedMap;
+    }
+
+    /**
+     * 获取报警信息
+     * @return 报警信息
+     */
+    @GET
+    @Path("getAlarms")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result getAlarm() {
+        // 时间范围是最近7天
+        String format = "yyyy-MM-dd HH:mm:ss";
+        String oldTime = DateTime.now().minusDays(7).toString(format);
+        LOGGER.info("查询的起始时间为" + oldTime);
+
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
+
+        // 获取特别关注列表
+        List<SpecialFocus> focusList = elasticService.specialList();
+        // 报警列表
+        Set<Alarm> alarmSet = new HashSet<>();
+
+        for (SpecialFocus focus : focusList) {
+            String eventType = focus.getEventType();
+            String event = focus.getEvent();
+
+            SearchRequest searchRequest = new SearchRequest(Constant.EVENTLOG_INDEX);
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.query(QueryBuilders.boolQuery()
+                    .must(QueryBuilders.matchPhraseQuery("eventType", eventType))
+                    .must(QueryBuilders.rangeQuery("@timestamp")
+                            .format(format).gte(oldTime).timeZone("Asia/Shanghai"))
+            );
+            searchRequest.source(searchSourceBuilder);
+            try {
+                SearchResponse searchResponse = client.search(searchRequest);
+                SearchHits hits = searchResponse.getHits();
+                Iterator it = searchResponse.getHits().iterator();
+
+                while (it.hasNext()) {
+                    SearchHit hit = (SearchHit) it.next();
+                    // eventlog数据中的事件名
+                    String eventName = hit.getSourceAsMap().get("eventName").toString();
+                    if (eventName.contains(event)) {
+                        // 将es中的utc时间转为cst时间
+                        String utcTime = hit.getSourceAsMap().get("@timestamp").toString();
+                        String cstTime = new DateTime(utcTime).toDateTime(DateTimeZone.forID("Asia/Shanghai")).toString("yyyy-MM-dd HH:mm:ss");
+                        Alarm alarm = new Alarm(cstTime, hit.getSourceAsMap().get("assetName").toString(),
+                                hit.getSourceAsMap().get("eventUserMsg").toString());
+                        alarmSet.add(alarm);
+                    }
+                }
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    client.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return ResultUtil.genSuccessResult(alarmSet);
     }
 
     public static void main(String[] args) {

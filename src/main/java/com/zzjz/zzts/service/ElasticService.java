@@ -1,9 +1,8 @@
 package com.zzjz.zzts.service;
 
 import com.google.gson.JsonObject;
+import com.zzjz.zzts.Entity.SpecialFocus;
 import org.elasticsearch.search.SearchHits;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 /**
@@ -44,5 +43,11 @@ public interface ElasticService {
      * @return 次数
      */
     int spillCount(List<Long> vals);
+
+    /**
+     * 获取特别关注列表
+     * @return 列表
+     */
+    List<SpecialFocus> specialList();
 
 }

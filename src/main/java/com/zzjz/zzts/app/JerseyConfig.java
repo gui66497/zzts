@@ -2,6 +2,7 @@ package com.zzjz.zzts.app;
 
 import com.zzjz.zzts.controller.ElasticController;
 import com.zzjz.zzts.controller.SnmpController;
+import com.zzjz.zzts.controller.SpecialFocusController;
 import com.zzjz.zzts.controller.UserController;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ public class JerseyConfig extends ResourceConfig {
     public JerseyConfig () {
         //构造函数，在这里注册需要使用的内容，（过滤器，拦截器，API等）
         register(UserController.class);
+        register(SpecialFocusController.class);
         register(ElasticController.class);
         register(SnmpController.class);
     }
