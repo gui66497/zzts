@@ -308,16 +308,25 @@ public class ElasticController {
      * @return 数据
      */
     @GET
-    @Path("realMonitor/{hours}")
+    @Path("realMonitor/{hourStr}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public String realMonitor(@PathParam("hours") int hours) {
+    public String realMonitor(@PathParam("hourStr") String hourStr) {
+        String format = "yyyy-MM-dd HH:mm:ss";
+        String oldTime;
+        int hours;
+        if (hourStr.contains(":")) {
+            hours = 12;
+            //假时间
+            oldTime = hourStr;
+        } else {
+            hours = Integer.parseInt(hourStr);
+            oldTime = DateTime.now().minusHours(hours).toString(format);
+        }
         JsonObject bigJson = new JsonObject();
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
-        String format = "yyyy-MM-dd HH:mm:ss";
-        String oldTime = DateTime.now().minusHours(hours).toString(format);
         LOGGER.info("查询的起始时间为" + oldTime);
         //1.交换机流量数据
         JsonObject jsonObject = elasticService.snmpData(hours, Constant.SWITCH_PORT);
@@ -389,17 +398,17 @@ public class ElasticController {
      * @return 排行
      */
     @GET
-    @Path("virusRank")
+    @Path("virusRank/{months}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Integer>  virusRank() {
+    public Map<String, Integer>  virusRank(@PathParam("months") int months) {
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost(Constant.ES_HOST, Constant.ES_PORT, Constant.ES_METHOD)));
         Map<String, Set<String>> resMap = new HashMap<>();
         //病毒排行默认按最近1个月来
         String format = "yyyy-MM-dd HH:mm:ss";
-        String oldTime = DateTime.now().minusMonths(1).toString(format);
+        String oldTime = DateTime.now().minusMonths(months).toString(format);
         LOGGER.info("查询的起始时间为" + oldTime);
         //1.防火墙流量数据(字节)
         SearchRequest searchRequest = new SearchRequest(Constant.VIRUS_INDEX);
@@ -463,13 +472,13 @@ public class ElasticController {
      * @return 报警信息
      */
     @GET
-    @Path("getAlarms")
+    @Path("getAlarms/{days}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Result getAlarm() {
+    public Result getAlarm(@PathParam("days") int days) {
         // 时间范围是最近7天
         String format = "yyyy-MM-dd HH:mm:ss";
-        String oldTime = DateTime.now().minusDays(7).toString(format);
+        String oldTime = DateTime.now().minusDays(days).toString(format);
         LOGGER.info("开始调用getAlarms接口");
         LOGGER.info("查询的起始时间为" + oldTime);
 
