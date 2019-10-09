@@ -494,6 +494,7 @@ public class ElasticController {
         for (SpecialFocus focus : focusList) {
             String eventType = focus.getEventType();
             String event = focus.getEvent();
+            System.out.println("\n当前specialFocus:" + eventType + "(eventTpe)-" + event + "(event)");
 
             // 过滤掉已处理的
             SearchRequest searchRequest = new SearchRequest(Constant.EVENTLOG_INDEX);
@@ -514,6 +515,7 @@ public class ElasticController {
                     SearchHit hit = (SearchHit) it.next();
                     // eventlog数据中的事件名
                     String eventName = hit.getSourceAsMap().get("eventName").toString();
+                    System.out.println("type匹配到了，该eventName为" + eventName);
                     if (eventName.contains(event)) {
                         // 将es中的utc时间转为cst时间
                         String utcTime = hit.getSourceAsMap().get("@timestamp").toString();
